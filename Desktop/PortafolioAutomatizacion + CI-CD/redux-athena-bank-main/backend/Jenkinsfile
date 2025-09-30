@@ -1,0 +1,21 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Hello') {
+            steps {
+                echo '¡Hola Mundo! El pipeline está funcionando.'
+            }
+        }
+        stage('Build') {
+            steps {
+                echo 'Aquí es donde construiremos la imagen de Docker más adelante...'
+            }
+        }
+        stage('Test') {
+            steps {
+                echo 'Aquí es donde correremos las pruebas de Playwright más adelante...'
+            }
+        }
+    }
+}
