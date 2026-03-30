@@ -288,6 +288,70 @@ def generar_informe_ejecutado():
     
     except Exception as e: print(f"[ERROR] {e}")
 
+# Solo este cliente puede generar Informes de Codigo CTS
+CLIENTES_CON_CTS = {"Banco Macro"}
+
+
+def generar_informe_codigo_cts():
+    limpiar_procesos()
+    print("\n--- Generando Informe de QA de Codigo CTS ---")
+
+    # 1. Elegir Cliente
+    cliente = seleccionar_cliente()
+    if cliente not in CLIENTES_CON_CTS:
+        print(f"\n[Aviso] {cliente} no solicita Informes de Codigo CTS. Operacion cancelada.")
+        return
+
+    numero_ast = pedir_numero_ast()
+    proyecto = pedir_texto_no_vacio("Ingresa el nombre del Proyecto (variable para carpeta): ")
+    changeset = pedir_texto_no_vacio("Ingresa el numero de ChangeSet: ")
+
+    comps = []
+    n = 1
+    while True:
+        if n == 1: c = pedir_texto_no_vacio(f"Componente {n}: ")
+        else:
+            c = pedir_texto(f"Componente {n} (Enter para terminar): ")
+            if not c.strip(): break
+        comps.append(c); n += 1
+
+    # 2. Definir Ruta
+    ruta_destino = gestionar_ruta_destino(numero_ast, proyecto, cliente)
+
+    fecha_act = datetime.now(); fecha_doc = fecha_act.strftime("%d/%m/%Y")
+    fecha_nom = fecha_act.strftime("%Y%m%d"); autor = "Leandro Diaz"
+
+    mapeo = {
+        "{{Fecha}}": fecha_doc, "{{Proyecto}}": proyecto, "{{AUTOR}}": autor,
+        "{{CHANGESET}}": changeset,
+        "{{Componente_1}}": comps[0] if len(comps) > 0 else "",
+        "{{Componente_2}}": comps[1] if len(comps) > 1 else "",
+        "{{Componente_3}}": comps[2] if len(comps) > 2 else "",
+        "{{Componente_4}}": comps[3] if len(comps) > 3 else "",
+    }
+
+    nombre_base = f"FQA-101 - Informe de QA Codigo CTS - AST {numero_ast} - {fecha_nom} (UI)"
+    ruta_docx = os.path.join(ruta_destino, nombre_base + ".docx")
+    ruta_pdf = os.path.join(ruta_destino, nombre_base + ".pdf")
+    ruta_7z = os.path.join(ruta_destino, nombre_base + ".7z")
+
+    try:
+        doc = Document("plantilla_informe_qa_codigo_cts.docx")
+        reemplazar_marcadores(doc, mapeo)
+        doc.save(ruta_docx)
+        print(f"\nInforme (DOCX) guardado en: {ruta_docx}")
+
+        time.sleep(2)
+        convertir_a_pdf_seguro(ruta_docx, ruta_pdf)
+
+        print("Creando 7z encriptado...")
+        with py7zr.SevenZipFile(ruta_7z, 'w', password=CONTRASENA_ZIP) as z:
+            z.write(ruta_pdf, arcname=os.path.basename(ruta_pdf))
+        print(f"\n[EXITO] Archivos listos en carpeta: {cliente}")
+
+    except Exception as e: print(f"[ERROR] {e}")
+
+
 # --- MENU PRINCIPAL ---
 def main():
     while True:
@@ -295,14 +359,16 @@ def main():
         print("1. Informe de QA de C01")
         print("2. Informe de QA de Codigo")
         print("3. Informe de Pruebas Ejecutadas")
-        print("4. Salir")
-        
-        op = input("Selecciona (1-4): ")
-        
+        print("4. Informe de QA de Codigo CTS (Banco Macro)")
+        print("5. Salir")
+
+        op = input("Selecciona (1-5): ")
+
         if op == '1': generar_informe_c01()
         elif op == '2': generar_informe_codigo()
         elif op == '3': generar_informe_ejecutado()
-        elif op == '4': break
+        elif op == '4': generar_informe_codigo_cts()
+        elif op == '5': break
         else: print("Opcion no valida.")
 
 if __name__ == "__main__":
